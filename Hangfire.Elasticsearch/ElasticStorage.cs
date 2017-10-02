@@ -1,5 +1,6 @@
 ﻿using System;
 using Hangfire.Storage;
+using Nest;
 
 namespace Hangfire.Elasticsearch
 {
@@ -12,7 +13,8 @@ namespace Hangfire.Elasticsearch
 
         public override IStorageConnection GetConnection()
         {
-            return new ElasticConnection();
+            var elasticClient = new ElasticClient();
+            return new ElasticConnection(elasticClient);
         }
     }
 }
