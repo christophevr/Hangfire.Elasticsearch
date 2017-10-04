@@ -74,7 +74,9 @@ namespace Hangfire.Elasticsearch
 
         public override void RemoveServer(string serverId)
         {
-            throw new NotImplementedException();
+            if (serverId == null) throw new ArgumentNullException(nameof(serverId));
+
+            _elasticClient.Delete<Model.Server>(serverId);
         }
 
         public override void Heartbeat(string serverId)
