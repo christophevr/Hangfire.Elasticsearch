@@ -81,7 +81,16 @@ namespace Hangfire.Elasticsearch
 
         public override void Heartbeat(string serverId)
         {
-            throw new NotImplementedException();
+            if (serverId == null) throw new ArgumentNullException(nameof(serverId));
+
+            var serverGetResponse = _elasticClient.Get<Model.Server>(serverId);
+            if (!serverGetResponse.Found)
+                return;
+
+            var server = serverGetResponse.Source;
+            server.LastHeartBeat = DateTime.UtcNow;
+
+            _elasticClient.Index(server);
         }
 
         public override int RemoveTimedOutServers(TimeSpan timeOut)

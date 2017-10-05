@@ -35,7 +35,6 @@ namespace Hangfire.Elasticsearch.Tests
             _elasticConnection.AnnounceServer(serverId, serverContext);
 
             // THEN
-            _elasticClient.Refresh(Indices.All);
             var serverResponse = _elasticClient.Get<Model.Server>(serverId);
             serverResponse.Found.Should().BeTrue();
 
@@ -75,7 +74,6 @@ namespace Hangfire.Elasticsearch.Tests
             _elasticConnection.AnnounceServer(serverId, serverContext);
 
             // THEN
-            _elasticClient.Refresh(Indices.All);
             var serverResponse = _elasticClient.Get<Model.Server>(serverId);
             serverResponse.Found.Should().BeTrue();
 
@@ -95,7 +93,6 @@ namespace Hangfire.Elasticsearch.Tests
             _elasticConnection.RemoveServer(serverId);
 
             // THEN
-            _elasticClient.Refresh(Indices.All);
             var getServerResponse = _elasticClient.Get<Model.Server>(serverId);
             getServerResponse.Found.Should().BeFalse();
         }
@@ -110,7 +107,6 @@ namespace Hangfire.Elasticsearch.Tests
             _elasticConnection.RemoveServer(serverId);
 
             // THEN
-            _elasticClient.Refresh(Indices.All);
             var getServerResponse = _elasticClient.Get<Model.Server>(serverId);
             getServerResponse.Found.Should().BeFalse();
         }
@@ -123,6 +119,47 @@ namespace Hangfire.Elasticsearch.Tests
 
             // WHEN THEN
             Assert.Throws<ElasticsearchClientException>(() => _elasticConnection.RemoveServer(serverId));
+        }
+
+        [Test, ElasticOnline]
+        public void Heartbeat_WithExistingServer_UpdatesHeartbeat()
+        {
+            // GIVEN
+            const string serverId = "server-001";
+            var server = new Model.Server { Id = serverId, LastHeartBeat = new DateTime(2017, 10, 1) };
+            _elasticClient.Index(server, descr => descr.Refresh(Refresh.True));
+
+            // WHEN
+            _elasticConnection.Heartbeat(serverId);
+
+            // THEN
+            var getServerResponse = _elasticClient.Get<Model.Server>(serverId);
+            getServerResponse.Found.Should().BeTrue();
+            getServerResponse.Source.LastHeartBeat.Should().NotBe(server.LastHeartBeat);
+        }
+
+        [Test, ElasticOnline]
+        public void Heartbeat_WithNoExistingServer_DoesNothing()
+        {
+            // GIVEN
+            const string serverId = "server-001";
+
+            // WHEN
+            _elasticConnection.Heartbeat(serverId);
+
+            // THEN
+            var getServerResponse = _elasticClient.Count<Model.Server>(descr => descr.Query(q => q.MatchAll()));
+            getServerResponse.Count.Should().Be(0);
+        }
+
+        [Test]
+        public void Heartbeat_WithElasticOffline_Throws()
+        {
+            // GIVEN
+            const string serverId = "server-001";
+
+            // WHEN THEN
+            Assert.Throws<ElasticsearchClientException>(() => _elasticConnection.Heartbeat(serverId));
         }
     }
 }
