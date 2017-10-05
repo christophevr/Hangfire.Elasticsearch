@@ -1,4 +1,5 @@
-﻿using Elasticsearch.Net;
+﻿using System;
+using Elasticsearch.Net;
 using FluentAssertions;
 using Hangfire.Elasticsearch.Tests.TestInfrastructure;
 using Nest;
@@ -9,26 +10,17 @@ namespace Hangfire.Elasticsearch.Tests
     [TestFixture]
     public class ElasticConnectionIntegrationTest
     {
-        private ElasticSearchContainer _elasticSearchContainer;
         private IElasticClient _elasticClient;
         private ElasticConnection _elasticConnection;
 
         [SetUp]
         public void SetUp()
         {
-            // TODO move common testing logic to central location
-            _elasticSearchContainer = ElasticSearchContainer.StartNewFromArchive(TestResources.elasticsearch_5_6_2);
             _elasticClient = new ElasticClient(new ConnectionSettings().DefaultIndex("hangfire-elasticsearch").ThrowExceptions());
             _elasticConnection = new ElasticConnection(_elasticClient);
         }
 
-        [TearDown]
-        public void TearDown()
-        {
-            _elasticSearchContainer.Dispose();
-        }
-
-        [Test]
+        [Test, ElasticOnline]
         public void AnnounceServer_WhenServerNotExists_SavesServer()
         {
             // GIVEN
@@ -53,6 +45,21 @@ namespace Hangfire.Elasticsearch.Tests
         }
 
         [Test]
+        public void AnnounceServer_WithElasticOffline_Throws()
+        {
+            // GIVEN
+            const string serverId = "server-001";
+            var serverContext = new Server.ServerContext
+            {
+                Queues = new[] { "queue 1", "queue 2" },
+                WorkerCount = 32
+            };
+
+            // WHEN THEN
+            Assert.Throws<ElasticsearchClientException>(() => _elasticConnection.AnnounceServer(serverId, serverContext));
+        }
+
+        [Test, ElasticOnline]
         public void AnnounceServer_WhenServerExists_UpdatesServer()
         {
             // GIVEN
@@ -77,7 +84,7 @@ namespace Hangfire.Elasticsearch.Tests
             server.WorkerCount.Should().Be(serverContext.WorkerCount);
         }
 
-        [Test]
+        [Test, ElasticOnline]
         public void RemoveServer_WithExistingServer_RemovesServer()
         {
             // GIVEN
@@ -93,7 +100,7 @@ namespace Hangfire.Elasticsearch.Tests
             getServerResponse.Found.Should().BeFalse();
         }
 
-        [Test]
+        [Test, ElasticOnline]
         public void RemoveServer_WithoutExistingServer_DoesNothing()
         {
             // GIVEN
@@ -106,6 +113,16 @@ namespace Hangfire.Elasticsearch.Tests
             _elasticClient.Refresh(Indices.All);
             var getServerResponse = _elasticClient.Get<Model.Server>(serverId);
             getServerResponse.Found.Should().BeFalse();
+        }
+
+        [Test]
+        public void RemoveServer_WithElasticOffline_Throws()
+        {
+            // GIVEN
+            const string serverId = "server-001";
+
+            // WHEN THEN
+            Assert.Throws<ElasticsearchClientException>(() => _elasticConnection.RemoveServer(serverId));
         }
     }
 }

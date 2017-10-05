@@ -71,6 +71,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ElasticConnectionIntegrationTest.cs" />
+    <Compile Include="TestInfrastructure\ElasticOnlineAttribute.cs" />
     <Compile Include="TestInfrastructure\ElasticSearchContainer.cs" />
     <Compile Include="TestInfrastructure\TestResources.Designer.cs">
       <AutoGen>True</AutoGen>
