@@ -70,9 +70,12 @@
     <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ElasticConnectionIntegrationTest.cs" />
-    <Compile Include="TestInfrastructure\ElasticOnlineAttribute.cs" />
+    <Compile Include="ElasticConnectionIntegrationTestElasticOnline.cs" />
+    <Compile Include="TestInfrastructure\ElasticClientFactory.cs" />
+    <Compile Include="ElasticConnectionIntegrationTestElasticOffline.cs" />
+    <Compile Include="Extensions\ElasticClientExtensionsIntegrationTest.cs" />
     <Compile Include="TestInfrastructure\ElasticSearchContainer.cs" />
+    <Compile Include="TestInfrastructure\HangfireElasticSearchTestSetup.cs" />
     <Compile Include="TestInfrastructure\TestResources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>

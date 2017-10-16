@@ -64,7 +64,7 @@ namespace Hangfire.Elasticsearch.Tests.TestInfrastructure
         private Process StartElasticSearch()
         {
             var esBinPath = Path.Combine(_tempDirectory, @"bin\elasticsearch.bat");
-            var processInfo = new ProcessStartInfo("cmd.exe", esBinPath)
+            var processInfo = new ProcessStartInfo("cmd.exe", $@"/c {esBinPath}")
             {
                 CreateNoWindow = true,
                 UseShellExecute = false
@@ -116,6 +116,10 @@ namespace Hangfire.Elasticsearch.Tests.TestInfrastructure
             {
                 var proc = Process.GetProcessById(pid);
                 proc.Kill();
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                Console.WriteLine(@"!!! Could not kill ElasticSearch process !!!");
             }
             catch (ArgumentException)
             {

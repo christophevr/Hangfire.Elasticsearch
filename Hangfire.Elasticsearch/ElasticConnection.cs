@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Hangfire.Common;
 using Hangfire.Server;
@@ -95,7 +96,31 @@ namespace Hangfire.Elasticsearch
 
         public override int RemoveTimedOutServers(TimeSpan timeOut)
         {
-            throw new NotImplementedException();
+            if (timeOut.Duration() != timeOut)
+                throw new ArgumentException("The `timeOut` value must be positive.", nameof(timeOut));
+
+            // TODO: scrolling search
+            // TODO: scrolling delete
+
+            var timeOutAt = DateTime.UtcNow.Add(timeOut.Negate());
+            var getTimedOutServerIdsReponse = _elasticClient.Search<Model.Server>(descr => descr
+                .StoredFields(sf => sf
+                    .Field("id"))
+                .Query(query => query
+                    .DateRange(c => c
+                        .Field(field => field.LastHeartBeat)
+                        .LessThan(DateMath.Anchored(timeOutAt)))));
+
+            var bulkDelete = new BulkDescriptor()
+                .Type<Model.Server>();
+
+            foreach (var serverId in getTimedOutServerIdsReponse.Hits)
+            {
+                bulkDelete.Delete(serverId.Id);
+            }
+
+            var bulkDeleteResponse = _elasticClient.Bulk(bulkDelete);
+            return bulkDeleteResponse.Items.Count;
         }
 
         public override HashSet<string> GetAllItemsFromSet(string key)
