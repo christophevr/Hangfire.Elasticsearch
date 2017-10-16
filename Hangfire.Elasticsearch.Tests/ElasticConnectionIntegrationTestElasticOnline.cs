@@ -178,7 +178,7 @@ namespace Hangfire.Elasticsearch.Tests
             removedServersCount.Should().Be(0);
             var getServerResponse = _elasticClient.Get<Model.Server>(serverId);
             getServerResponse.Found.Should().BeTrue();
-            getServerResponse.Source.Should().ShouldBeEquivalentTo(server);
+            getServerResponse.Source.ShouldBeEquivalentTo(server);
         }
 
         [Test]

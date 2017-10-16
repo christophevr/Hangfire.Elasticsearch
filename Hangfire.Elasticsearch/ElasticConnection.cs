@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Hangfire.Common;
+using Hangfire.Elasticsearch.Extensions;
 using Hangfire.Server;
 using Hangfire.Storage;
 using Nest;
@@ -99,25 +100,19 @@ namespace Hangfire.Elasticsearch
             if (timeOut.Duration() != timeOut)
                 throw new ArgumentException("The `timeOut` value must be positive.", nameof(timeOut));
 
-            // TODO: scrolling search
             // TODO: scrolling delete
 
             var timeOutAt = DateTime.UtcNow.Add(timeOut.Negate());
-            var getTimedOutServerIdsReponse = _elasticClient.Search<Model.Server>(descr => descr
-                .StoredFields(sf => sf
-                    .Field("id"))
+            var getTimedOutServerIdsReponse = _elasticClient.ScrollingSearch<Model.Server>(descr => descr
+                .StoredFields(sf => sf.Fields(new string[0]))
                 .Query(query => query
                     .DateRange(c => c
                         .Field(field => field.LastHeartBeat)
                         .LessThan(DateMath.Anchored(timeOutAt)))));
 
-            var bulkDelete = new BulkDescriptor()
-                .Type<Model.Server>();
-
-            foreach (var serverId in getTimedOutServerIdsReponse.Hits)
-            {
-                bulkDelete.Delete(serverId.Id);
-            }
+            var bulkDelete = new BulkDescriptor();
+            foreach (var server in getTimedOutServerIdsReponse)
+                bulkDelete.Delete<object>(desc => desc.Id(server.Id).Type<Model.Server>());
 
             var bulkDeleteResponse = _elasticClient.Bulk(bulkDelete);
             return bulkDeleteResponse.Items.Count;
