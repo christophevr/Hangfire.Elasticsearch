@@ -12,9 +12,9 @@ namespace Hangfire.Elasticsearch.Tests.TestInfrastructure
             var testName = TestContext.CurrentContext.Test.MethodName.ToLower();
             var connectionSettingsValues = new ConnectionSettings()
                 .DefaultIndex(testName)
-                .ThrowExceptions(false)
-                .DisableDirectStreaming()
-                .OnRequestCompleted(details => { Console.WriteLine($@"Request completed. Sent a {details.HttpMethod} to {details.Uri} -- Request: {Encoding.UTF8.GetString(details.RequestBodyInBytes ?? new byte[0])} - Response: {Encoding.UTF8.GetString(details.ResponseBodyInBytes ?? new byte[0])}"); });
+                .ThrowExceptions(false);
+                //.DisableDirectStreaming()
+                //.OnRequestCompleted(details => { Console.WriteLine($@"Request completed. Sent a {details.HttpMethod} to {details.Uri} -- Request: {Encoding.UTF8.GetString(details.RequestBodyInBytes ?? new byte[0])} - Response: {Encoding.UTF8.GetString(details.ResponseBodyInBytes ?? new byte[0])}"); });
             return new ElasticClient(connectionSettingsValues);
         }
 

@@ -100,8 +100,6 @@ namespace Hangfire.Elasticsearch
             if (timeOut.Duration() != timeOut)
                 throw new ArgumentException("The `timeOut` value must be positive.", nameof(timeOut));
 
-            // TODO: scrolling delete
-
             var timeOutAt = DateTime.UtcNow.Add(timeOut.Negate());
             var getTimedOutServerIdsReponse = _elasticClient.ScrollingSearch<Model.Server>(descr => descr
                 .StoredFields(sf => sf.Fields(new string[0]))
@@ -110,12 +108,11 @@ namespace Hangfire.Elasticsearch
                         .Field(field => field.LastHeartBeat)
                         .LessThan(DateMath.Anchored(timeOutAt)))));
 
-            var bulkDelete = new BulkDescriptor();
-            foreach (var server in getTimedOutServerIdsReponse)
-                bulkDelete.Delete<object>(desc => desc.Id(server.Id).Type<Model.Server>());
+            var serverIds = getTimedOutServerIdsReponse.Select(x => x.Id);
+            var bulkResponses = _elasticClient.BatchedBulk(serverIds, 
+                (descr, serverId) => descr.Delete<object>(desc => desc.Id(serverId).Type<Model.Server>()));
 
-            var bulkDeleteResponse = _elasticClient.Bulk(bulkDelete);
-            return bulkDeleteResponse.Items.Count;
+            return bulkResponses.SelectMany(response => response.Items).Count();
         }
 
         public override HashSet<string> GetAllItemsFromSet(string key)

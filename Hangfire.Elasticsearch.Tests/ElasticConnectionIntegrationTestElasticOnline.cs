@@ -153,12 +153,14 @@ namespace Hangfire.Elasticsearch.Tests
             var servers = Enumerable.Range(0, elasticMaxResponseDocumentCount + 1)
                 .Select(i => new Model.Server {Id = $"server-{i}", LastHeartBeat = new DateTime(2000, 1, 1)});
             _elasticClient.IndexMany(servers);
+            _elasticClient.Refresh(Indices.All);
 
             // WHEN
             var removedServersCount = _elasticConnection.RemoveTimedOutServers(TimeSpan.FromSeconds(1));
 
             // THEN
             removedServersCount.Should().Be(elasticMaxResponseDocumentCount + 1);
+            _elasticClient.Refresh(Indices.All);
             var getServerResponse = _elasticClient.Count<Model.Server>(descr => descr.Query(q => q.MatchAll()));
             getServerResponse.Count.Should().Be(0);
         }

@@ -36,6 +36,27 @@ namespace Hangfire.Elasticsearch.Tests.Extensions
             actualDocs.Should().HaveCount(documentCount);
         }
 
+        [Test]
+        public void BatchedBulk_WithDeleteOperation_DeletesExpectedDocuments()
+        {
+            // GIVEN
+            const int documentCount = 5000;
+            var demoDocs = Enumerable.Range(0, documentCount).Select(i => new DemoDoc { Id = $"doc-{i}" }).ToList();
+            _elasticClient.IndexMany(demoDocs);
+            _elasticClient.Refresh(Indices.All);
+            _elasticClient.Count<DemoDoc>().Count.Should().Be(documentCount);
+
+            // WHEN
+            var bulkResponses = _elasticClient.BatchedBulk(demoDocs,
+                (descr, demoDoc) => descr.Delete<DemoDoc>(delete => delete.Id(demoDoc.Id).Type<DemoDoc>()))
+                .ToList();
+
+            // THEN
+            _elasticClient.Refresh(Indices.All);
+            _elasticClient.Count<DemoDoc>().Count.Should().Be(0);
+            bulkResponses.SelectMany(response => response.Items).Should().HaveCount(documentCount);
+        }
+
 
         [SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Local")]
         private class DemoDoc
