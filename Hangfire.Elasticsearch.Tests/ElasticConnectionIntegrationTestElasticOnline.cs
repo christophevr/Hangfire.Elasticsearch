@@ -2,6 +2,7 @@
 using System.Linq;
 using Elasticsearch.Net;
 using FluentAssertions;
+using Hangfire.Elasticsearch.Model;
 using Hangfire.Elasticsearch.Tests.TestInfrastructure;
 using Nest;
 using NUnit.Framework;
@@ -205,21 +206,21 @@ namespace Hangfire.Elasticsearch.Tests
             // GIVEN
             var sets = new[]
             {
-                new ElasticConnection.Set
+                new Set
                 {
                     Id = "key-1",
                     SetValues = new[]
                     {
-                        new ElasticConnection.SetValue {Value = "value-1"},
-                        new ElasticConnection.SetValue {Value = "value-2"},
+                        new SetValue {Value = "value-1"},
+                        new SetValue {Value = "value-2"},
                     }
                 },
-                new ElasticConnection.Set
+                new Set
                 {
                     Id = "key-2",
                     SetValues = new[]
                     {
-                        new ElasticConnection.SetValue {Value = "value-3"}
+                        new SetValue {Value = "value-3"}
                     }
                 }
             };
@@ -263,14 +264,14 @@ namespace Hangfire.Elasticsearch.Tests
         {
             // GIVEN
             const string key = "key-1";
-            var set = new ElasticConnection.Set
+            var set = new Set
             {
                 Id = key,
                 SetValues = new[]
                 {
-                    new ElasticConnection.SetValue {Value = "value-1", Score = 10},
-                    new ElasticConnection.SetValue {Value = "value-2", Score = 15},
-                    new ElasticConnection.SetValue {Value = "value-3", Score = 20},
+                    new SetValue {Value = "value-1", Score = 10},
+                    new SetValue {Value = "value-2", Score = 15},
+                    new SetValue {Value = "value-3", Score = 20},
                 }
             };
             _elasticClient.Index(set);
@@ -302,12 +303,12 @@ namespace Hangfire.Elasticsearch.Tests
         {
             // GIVEN
             const string key = "key-1";
-            var set = new ElasticConnection.Set
+            var set = new Set
             {
                 Id = key,
                 SetValues = new[]
                 {
-                    new ElasticConnection.SetValue {Value = "value-1", Score = 10},
+                    new SetValue {Value = "value-1", Score = 10},
                 }
             };
             _elasticClient.Index(set);

@@ -60,5 +60,19 @@ namespace Hangfire.Elasticsearch.Tests
             // GIVEN WHEN THEN
             Assert.Throws<HangfireElasticSearchException>(() => _elasticConnection.RemoveTimedOutServers(TimeSpan.FromSeconds(1)));
         }
+
+        [Test]
+        public void GetAllItemsFromSet_Throws()
+        {
+            // GIVEN WHEN THEN
+            Assert.Throws<HangfireElasticSearchException>(() => _elasticConnection.GetAllItemsFromSet("key"));
+        }
+
+        [Test]
+        public void GetFirstByLowestScoreFromSet_Throws()
+        {
+            // GIVEN WHEN THEN
+            Assert.Throws<HangfireElasticSearchException>(() => _elasticConnection.GetFirstByLowestScoreFromSet("key", 10, 15));
+        }
     }
 }

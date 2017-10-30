@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using Hangfire.Common;
 using Hangfire.Elasticsearch.Extensions;
+using Hangfire.Elasticsearch.Model;
 using Hangfire.Server;
 using Hangfire.Storage;
 using Nest;
@@ -113,18 +114,6 @@ namespace Hangfire.Elasticsearch
                 (descr, serverId) => descr.Delete<object>(desc => desc.Id(serverId).Type<Model.Server>()));
 
             return bulkResponses.SelectMany(response => response.Items).Count();
-        }
-
-        public class Set
-        {
-            public string Id { get; set; }
-            public SetValue[] SetValues { get; set; }
-        }
-
-        public class SetValue
-        {
-            public string Value { get; set; }
-            public double Score { get; set; }
         }
 
         public override HashSet<string> GetAllItemsFromSet(string key)
