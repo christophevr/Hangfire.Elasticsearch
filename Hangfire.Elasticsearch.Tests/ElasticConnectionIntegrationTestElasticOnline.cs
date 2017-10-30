@@ -49,7 +49,7 @@ namespace Hangfire.Elasticsearch.Tests
         {
             // GIVEN
             const string serverId = "server-001";
-            _elasticClient.Index(new Model.Server {Id = serverId}, descr => descr.Refresh(Refresh.True));
+            _elasticClient.Index(new Model.Server { Id = serverId }, descr => descr.Refresh(Refresh.True));
 
             // WHEN
             var serverContext = new Server.ServerContext
@@ -151,7 +151,7 @@ namespace Hangfire.Elasticsearch.Tests
             // GIVEN
             const int elasticMaxResponseDocumentCount = 5000;
             var servers = Enumerable.Range(0, elasticMaxResponseDocumentCount + 1)
-                .Select(i => new Model.Server {Id = $"server-{i}", LastHeartBeat = new DateTime(2000, 1, 1)});
+                .Select(i => new Model.Server { Id = $"server-{i}", LastHeartBeat = new DateTime(2000, 1, 1) });
             _elasticClient.IndexMany(servers);
             _elasticClient.Refresh(Indices.All);
 
@@ -231,7 +231,93 @@ namespace Hangfire.Elasticsearch.Tests
 
             // THEN
             set.Count.Should().Be(2);
-            set.ShouldAllBeEquivalentTo(new [] {"value-1", "value-2"});
+            set.ShouldAllBeEquivalentTo(new[] { "value-1", "value-2" });
+        }
+
+        [Test]
+        public void GetFirstByLowestScoreFromSet_WithNullKey_Throws()
+        {
+            // GIVEN
+            const string key = null;
+            const double fromScore = 10;
+            const double toScore = 15;
+
+            // WHEN THEN
+            Assert.Throws<ArgumentNullException>(() => _elasticConnection.GetFirstByLowestScoreFromSet(key, fromScore, toScore));
+        }
+
+        [Test]
+        public void GetFirstByLowestScoreFromSet_WithFromScore_HigherThan_ToScore_Throws()
+        {
+            // GIVEN
+            const string key = "key";
+            const double fromScore = 15;
+            const double toScore = 10;
+
+            // WHEN THEN
+            Assert.Throws<ArgumentException>(() => _elasticConnection.GetFirstByLowestScoreFromSet(key, fromScore, toScore));
+        }
+
+        [Test]
+        public void GetFirstByLowestScoreFromSet_ReturnsExpectedItem()
+        {
+            // GIVEN
+            const string key = "key-1";
+            var set = new ElasticConnection.Set
+            {
+                Id = key,
+                SetValues = new[]
+                {
+                    new ElasticConnection.SetValue {Value = "value-1", Score = 10},
+                    new ElasticConnection.SetValue {Value = "value-2", Score = 15},
+                    new ElasticConnection.SetValue {Value = "value-3", Score = 20},
+                }
+            };
+            _elasticClient.Index(set);
+            _elasticClient.Refresh(Indices.All);
+
+            // WHEN
+            var value = _elasticConnection.GetFirstByLowestScoreFromSet(key, 13, 17);
+
+            // THEN
+            value.Should().NotBeNull();
+            value.Should().Be("value-2");
+        }
+
+        [Test]
+        public void GetFirstByLowestScoreFromSet_WithNoMatchingSet_ReturnsNull()
+        {
+            // GIVEN
+            const string key = "key-1";
+
+            // WHEN
+            var value = _elasticConnection.GetFirstByLowestScoreFromSet(key, 10, 15);
+
+            // THEN
+            value.Should().BeNull();
+        }
+
+        [Test]
+        public void GetFirstByLowestScoreFromSet_WithNoMatchingScores_ReturnsNull()
+        {
+            // GIVEN
+            const string key = "key-1";
+            var set = new ElasticConnection.Set
+            {
+                Id = key,
+                SetValues = new[]
+                {
+                    new ElasticConnection.SetValue {Value = "value-1", Score = 10},
+                }
+            };
+            _elasticClient.Index(set);
+            _elasticClient.Refresh(Indices.All);
+
+            // WHEN
+            var value = _elasticConnection.GetFirstByLowestScoreFromSet(key, 15, 20);
+
+            // THEN
+            value.Should().BeNull();
         }
     }
 }

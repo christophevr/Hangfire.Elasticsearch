@@ -124,6 +124,7 @@ namespace Hangfire.Elasticsearch
         public class SetValue
         {
             public string Value { get; set; }
+            public double Score { get; set; }
         }
 
         public override HashSet<string> GetAllItemsFromSet(string key)
@@ -132,13 +133,25 @@ namespace Hangfire.Elasticsearch
                 throw new ArgumentNullException(nameof(key));
 
             var setsResponse = _elasticClient.Get<Set>(key).ThrowIfInvalid();
-            var values = setsResponse.Source.SetValues.Select(setValue => setValue.Value);
+            var set = setsResponse.Source;
+            var values = set.SetValues.Select(setValue => setValue.Value);
             return new HashSet<string>(values);
         }
 
         public override string GetFirstByLowestScoreFromSet(string key, double fromScore, double toScore)
         {
-            throw new NotImplementedException();
+            if (string.IsNullOrEmpty(key))
+                throw new ArgumentNullException(nameof(key));
+            if (fromScore > toScore)
+                throw new ArgumentException($"'{nameof(fromScore)}' cannot have a higher value than '{nameof(toScore)}'");
+
+            var setsResponse = _elasticClient.Get<Set>(key).ThrowIfInvalid();
+            if (!setsResponse.Found)
+                return null;
+
+            var set = setsResponse.Source;
+            var matchingValues = set.SetValues.Where(sv => sv.Score >= fromScore && sv.Score <= toScore);
+            return matchingValues.OrderBy(sv => sv.Score).FirstOrDefault()?.Value;
         }
 
         public override void SetRangeInHash(string key, IEnumerable<KeyValuePair<string, string>> keyValuePairs)

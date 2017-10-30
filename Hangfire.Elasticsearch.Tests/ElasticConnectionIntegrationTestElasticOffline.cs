@@ -1,6 +1,4 @@
 ﻿using System;
-using Elasticsearch.Net;
-using FluentAssertions;
 using Hangfire.Elasticsearch.Exceptions;
 using Hangfire.Elasticsearch.Tests.TestInfrastructure;
 using Nest;
