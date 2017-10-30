@@ -150,7 +150,14 @@ namespace Hangfire.Elasticsearch
 
         public override Dictionary<string, string> GetAllEntriesFromHash(string key)
         {
-            throw new NotImplementedException();
+            if (string.IsNullOrEmpty(key))
+                throw new ArgumentNullException(nameof(key));
+
+            var hashResponse = _elasticClient.Get<Hash>(key).ThrowIfInvalid();
+            if (!hashResponse.Found)
+                return null;
+
+            return hashResponse.Source.Hashes;
         }
     }
 }

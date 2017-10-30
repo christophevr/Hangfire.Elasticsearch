@@ -74,5 +74,12 @@ namespace Hangfire.Elasticsearch.Tests
             // GIVEN WHEN THEN
             Assert.Throws<HangfireElasticSearchException>(() => _elasticConnection.GetFirstByLowestScoreFromSet("key", 10, 15));
         }
+
+        [Test]
+        public void GetAllEntriesFromHash_Throws()
+        {
+            // GIVEN WHEN THEN
+            Assert.Throws<HangfireElasticSearchException>(() => _elasticConnection.GetAllEntriesFromHash("key"));
+        }
     }
 }

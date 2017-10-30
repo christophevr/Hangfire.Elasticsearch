@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Elasticsearch.Net;
 using FluentAssertions;
@@ -319,6 +320,51 @@ namespace Hangfire.Elasticsearch.Tests
 
             // THEN
             value.Should().BeNull();
+        }
+
+        [Test]
+        public void GetAllEntriesFromHash_ReturnsExpectedResults()
+        {
+            // GIVEN
+            const string key = "key-1";
+            var hash = new Hash
+            {
+                Id = key,
+                Hashes = new Dictionary<string, string>
+                {
+                    {"hash-1", "value-1"},
+                    {"hash-2", "value-2"},
+                    {"hash-3", "value-3"},
+                }
+            };
+            _elasticClient.Index(hash);
+            _elasticClient.Refresh(Indices.All);
+
+            // WHEN
+            var actualHashes = _elasticConnection.GetAllEntriesFromHash(key);
+
+            // THEN
+            actualHashes.ShouldBeEquivalentTo(hash.Hashes);
+        }
+
+        [Test]
+        public void GetAllEntriesFromHash_GivenNonExistingKey_ReturnsNull()
+        {
+            // GIVEN
+            const string key = "key-1";
+
+            // WHEN
+            var hash = _elasticConnection.GetAllEntriesFromHash(key);
+
+            // THEN
+            hash.Should().BeNull();
+        }
+
+        [Test]
+        public void GetAllEntriesFromHash_GivenNullKey_Throws()
+        {
+            // GIVEN WHEN THEN
+            Assert.Throws<ArgumentNullException>(() => _elasticConnection.GetAllEntriesFromHash(null));
         }
     }
 }
