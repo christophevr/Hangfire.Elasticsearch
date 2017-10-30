@@ -145,7 +145,33 @@ namespace Hangfire.Elasticsearch
 
         public override void SetRangeInHash(string key, IEnumerable<KeyValuePair<string, string>> keyValuePairs)
         {
-            throw new NotImplementedException();
+            if (string.IsNullOrEmpty(key))
+                throw new ArgumentNullException(nameof(key));
+            if (keyValuePairs == null)
+                throw new ArgumentNullException(nameof(keyValuePairs));
+
+            var hashResponse = _elasticClient.Get<Hash>(key).ThrowIfInvalid();
+            if (hashResponse.Found)
+            {
+                var hash = hashResponse.Source;
+                foreach (var keyValuePair in keyValuePairs)
+                    hash.Hashes[keyValuePair.Key] = keyValuePair.Value;
+
+                _elasticClient.Index(hash, descr => descr.Version(hashResponse.Version)).ThrowIfInvalid();
+            }
+            else
+            {
+                var hash = new Hash
+                {
+                    Id = key,
+                    Hashes = new Dictionary<string, string>()
+                };
+
+                foreach (var keyValuePair in keyValuePairs)
+                    hash.Hashes[keyValuePair.Key] = keyValuePair.Value;
+
+                _elasticClient.Index(hash).ThrowIfInvalid();
+            }
         }
 
         public override Dictionary<string, string> GetAllEntriesFromHash(string key)

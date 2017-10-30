@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Hangfire.Elasticsearch.Exceptions;
 using Hangfire.Elasticsearch.Tests.TestInfrastructure;
 using Nest;
@@ -80,6 +81,13 @@ namespace Hangfire.Elasticsearch.Tests
         {
             // GIVEN WHEN THEN
             Assert.Throws<HangfireElasticSearchException>(() => _elasticConnection.GetAllEntriesFromHash("key"));
+        }
+
+        [Test]
+        public void SetRangeInHash_Throws()
+        {
+            // GIVEN WHEN THEN            
+            Assert.Throws<HangfireElasticSearchException>(() => _elasticConnection.SetRangeInHash("key", new List<KeyValuePair<string, string>>()));
         }
     }
 }

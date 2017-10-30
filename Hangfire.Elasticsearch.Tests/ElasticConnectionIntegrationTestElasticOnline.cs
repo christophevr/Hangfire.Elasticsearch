@@ -366,5 +366,75 @@ namespace Hangfire.Elasticsearch.Tests
             // GIVEN WHEN THEN
             Assert.Throws<ArgumentNullException>(() => _elasticConnection.GetAllEntriesFromHash(null));
         }
+
+        [Test]
+        public void SetRangeInHash_SetsExpectedValues()
+        {
+            // GIVEN
+            const string key = "key-1";
+            var hash = new Hash
+            {
+                Id = key,
+                Hashes = new Dictionary<string, string>
+                {
+                    {"hash-1", "value-1"},
+                    {"hash-2", "value-2"}
+                }
+            };
+            _elasticClient.Index(hash);
+            _elasticClient.Refresh(Indices.All);
+
+            // WHEN
+            var newValues = new Dictionary<string, string>
+            {
+                {"hash-2", "value-2b" },
+                {"hash-3", "value-3" }
+            };
+            _elasticConnection.SetRangeInHash(key, newValues);
+
+            // THEN
+            var actualHashes = _elasticClient.Get<Hash>(key);
+            var expectedHashes = new Dictionary<string, string>
+            {
+                {"hash-1", "value-1"},
+                {"hash-2", "value-2b" },
+                {"hash-3", "value-3" }
+            };
+            actualHashes.Source.Hashes.ShouldBeEquivalentTo(expectedHashes);
+        }
+
+        [Test]
+        public void SetRangeInHash_GivenNonExistingKey_CreatesNewHash()
+        {
+            // GIVEN
+            const string key = "key-1";
+            var newValues = new Dictionary<string, string>
+            {
+                {"hash-1", "value-1" },
+                {"hash-2", "value-2" }
+            };
+
+            // WHEN
+            _elasticConnection.SetRangeInHash(key, newValues);
+
+            // THEN
+            var actualHashes = _elasticClient.Get<Hash>(key);
+            actualHashes.Source.Hashes.ShouldBeEquivalentTo(newValues);
+        }
+
+        [Test]
+        public void SetRangeInHash_GivenNullKey_Throws()
+        {
+            // GIVEN WHEN THEN
+            Assert.Throws<ArgumentNullException>(() => _elasticConnection.SetRangeInHash(null, new List<KeyValuePair<string, string>>()));
+        }
+
+        [Test]
+        public void SetRangeInHash_GivenNullKeyValuePairs_Throws()
+        {
+            // GIVEN WHEN THEN
+            const string key = "key-1";
+            Assert.Throws<ArgumentNullException>(() => _elasticConnection.SetRangeInHash(key, null));
+        }
     }
 }
