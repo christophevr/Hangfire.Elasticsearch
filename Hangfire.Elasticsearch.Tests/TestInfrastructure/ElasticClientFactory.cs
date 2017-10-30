@@ -7,14 +7,15 @@ namespace Hangfire.Elasticsearch.Tests.TestInfrastructure
 {
     internal class ElasticClientFactory
     {
+        public static string TestIndexName => TestContext.CurrentContext.Test.MethodName.ToLower();
+
         public static IElasticClient CreateClientForTest()
         {
-            var testName = TestContext.CurrentContext.Test.MethodName.ToLower();
             var connectionSettingsValues = new ConnectionSettings()
-                .DefaultIndex(testName)
-                .ThrowExceptions(false);
-                //.DisableDirectStreaming()
-                //.OnRequestCompleted(details => { Console.WriteLine($@"Request completed. Sent a {details.HttpMethod} to {details.Uri} -- Request: {Encoding.UTF8.GetString(details.RequestBodyInBytes ?? new byte[0])} - Response: {Encoding.UTF8.GetString(details.ResponseBodyInBytes ?? new byte[0])}"); });
+                .DefaultIndex(TestIndexName)
+                .ThrowExceptions(false)
+                .DisableDirectStreaming()
+                .OnRequestCompleted(details => { Console.WriteLine($@"Request completed. Sent a {details.HttpMethod} to {details.Uri} -- Request: {Encoding.UTF8.GetString(details.RequestBodyInBytes ?? new byte[0])} - Response: {Encoding.UTF8.GetString(details.ResponseBodyInBytes ?? new byte[0])}"); });
             return new ElasticClient(connectionSettingsValues);
         }
 

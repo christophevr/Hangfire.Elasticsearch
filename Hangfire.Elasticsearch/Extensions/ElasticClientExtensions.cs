@@ -16,7 +16,7 @@ namespace Hangfire.Elasticsearch.Extensions
             {
                 var scrollDescriptor = descr.Scroll(scrollTimeout).Size(batchSize);
                 return searchDescriptor(scrollDescriptor);
-            });
+            }).ThrowIfInvalid();
 
             if (!response.Documents.Any())
                 yield break;
@@ -27,7 +27,7 @@ namespace Hangfire.Elasticsearch.Extensions
                     yield return document;
 
                 var scrollId = response.ScrollId;
-                response = client.Scroll<T>(scrollTimeout, scrollId);
+                response = client.Scroll<T>(scrollTimeout, scrollId).ThrowIfInvalid();
             } while (response.Documents.Any());
         }
 
@@ -40,7 +40,7 @@ namespace Hangfire.Elasticsearch.Extensions
                 foreach (var item in itemBatch)
                     operation(bulkDescriptor, item);
 
-                yield return client.Bulk(bulkDescriptor);
+                yield return client.Bulk(bulkDescriptor).ThrowIfInvalid();
             }
         }
     }

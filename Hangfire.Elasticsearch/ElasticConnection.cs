@@ -64,35 +64,35 @@ namespace Hangfire.Elasticsearch
             if (serverId == null) throw new ArgumentNullException(nameof(serverId));
             if (context == null) throw new ArgumentNullException(nameof(context));
 
-            var serverGetResponse = _elasticClient.Get<Model.Server>(serverId);
-            var server = serverGetResponse.Source ?? Model.Server.Create(serverId);
+            var serverGetResponse = _elasticClient.Get<Model.Server>(serverId).ThrowIfInvalid();
 
+            var server = serverGetResponse.Source ?? Model.Server.Create(serverId);
             server.LastHeartBeat = DateTime.UtcNow;
             server.WorkerCount = context.WorkerCount;
             server.Queues = context.Queues;
 
-            _elasticClient.Index(server);
+            _elasticClient.Index(server).ThrowIfInvalid();
         }
 
         public override void RemoveServer(string serverId)
         {
             if (serverId == null) throw new ArgumentNullException(nameof(serverId));
 
-            _elasticClient.Delete<Model.Server>(serverId);
+            _elasticClient.Delete<Model.Server>(serverId).ThrowIfInvalid();
         }
 
         public override void Heartbeat(string serverId)
         {
             if (serverId == null) throw new ArgumentNullException(nameof(serverId));
 
-            var serverGetResponse = _elasticClient.Get<Model.Server>(serverId);
+            var serverGetResponse = _elasticClient.Get<Model.Server>(serverId).ThrowIfInvalid();
             if (!serverGetResponse.Found)
                 return;
 
             var server = serverGetResponse.Source;
             server.LastHeartBeat = DateTime.UtcNow;
 
-            _elasticClient.Index(server);
+            _elasticClient.Index(server).ThrowIfInvalid();
         }
 
         public override int RemoveTimedOutServers(TimeSpan timeOut)
@@ -115,9 +115,25 @@ namespace Hangfire.Elasticsearch
             return bulkResponses.SelectMany(response => response.Items).Count();
         }
 
+        public class Set
+        {
+            public string Id { get; set; }
+            public SetValue[] SetValues { get; set; }
+        }
+
+        public class SetValue
+        {
+            public string Value { get; set; }
+        }
+
         public override HashSet<string> GetAllItemsFromSet(string key)
         {
-            throw new NotImplementedException();
+            if (string.IsNullOrEmpty(key))
+                throw new ArgumentNullException(nameof(key));
+
+            var setsResponse = _elasticClient.Get<Set>(key).ThrowIfInvalid();
+            var values = setsResponse.Source.SetValues.Select(setValue => setValue.Value);
+            return new HashSet<string>(values);
         }
 
         public override string GetFirstByLowestScoreFromSet(string key, double fromScore, double toScore)

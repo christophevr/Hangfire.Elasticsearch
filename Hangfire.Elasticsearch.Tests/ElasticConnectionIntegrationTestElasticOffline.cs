@@ -1,6 +1,7 @@
 ﻿using System;
 using Elasticsearch.Net;
 using FluentAssertions;
+using Hangfire.Elasticsearch.Exceptions;
 using Hangfire.Elasticsearch.Tests.TestInfrastructure;
 using Nest;
 using NUnit.Framework;
@@ -32,7 +33,7 @@ namespace Hangfire.Elasticsearch.Tests
             };
 
             // WHEN THEN
-            Assert.Throws<ElasticsearchClientException>(() => _elasticConnection.AnnounceServer(serverId, serverContext));
+            Assert.Throws<HangfireElasticSearchException>(() => _elasticConnection.AnnounceServer(serverId, serverContext));
         }
         
         [Test]
@@ -42,7 +43,7 @@ namespace Hangfire.Elasticsearch.Tests
             const string serverId = "server-001";
 
             // WHEN THEN
-            Assert.Throws<ElasticsearchClientException>(() => _elasticConnection.RemoveServer(serverId));
+            Assert.Throws<HangfireElasticSearchException>(() => _elasticConnection.RemoveServer(serverId));
         }
 
         [Test]
@@ -52,14 +53,14 @@ namespace Hangfire.Elasticsearch.Tests
             const string serverId = "server-001";
 
             // WHEN THEN
-            Assert.Throws<ElasticsearchClientException>(() => _elasticConnection.Heartbeat(serverId));
+            Assert.Throws<HangfireElasticSearchException>(() => _elasticConnection.Heartbeat(serverId));
         }
-        
+
         [Test]
         public void RemoveTimedOutServers_Throws()
         {
             // GIVEN WHEN THEN
-            Assert.Throws<ElasticsearchClientException>(() => _elasticConnection.RemoveTimedOutServers(TimeSpan.FromSeconds(1)));
+            Assert.Throws<HangfireElasticSearchException>(() => _elasticConnection.RemoveTimedOutServers(TimeSpan.FromSeconds(1)));
         }
     }
 }

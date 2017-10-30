@@ -192,5 +192,46 @@ namespace Hangfire.Elasticsearch.Tests
             // WHEN THEN
             Assert.Throws<ArgumentException>(() => _elasticConnection.RemoveTimedOutServers(timeout));
         }
+
+        [Test]
+        public void GetAllItemsFromSet_WithNullKey_Throws()
+        {
+            Assert.Throws<ArgumentNullException>(() => _elasticConnection.GetAllItemsFromSet(null));
+        }
+
+        [Test]
+        public void GetAllItemsFromSet_ReturnsExpectedItems()
+        {
+            // GIVEN
+            var sets = new[]
+            {
+                new ElasticConnection.Set
+                {
+                    Id = "key-1",
+                    SetValues = new[]
+                    {
+                        new ElasticConnection.SetValue {Value = "value-1"},
+                        new ElasticConnection.SetValue {Value = "value-2"},
+                    }
+                },
+                new ElasticConnection.Set
+                {
+                    Id = "key-2",
+                    SetValues = new[]
+                    {
+                        new ElasticConnection.SetValue {Value = "value-3"}
+                    }
+                }
+            };
+            _elasticClient.IndexMany(sets);
+            _elasticClient.Refresh(Indices.All);
+
+            // WHEN
+            var set = _elasticConnection.GetAllItemsFromSet("key-1");
+
+            // THEN
+            set.Count.Should().Be(2);
+            set.ShouldAllBeEquivalentTo(new [] {"value-1", "value-2"});
+        }
     }
 }

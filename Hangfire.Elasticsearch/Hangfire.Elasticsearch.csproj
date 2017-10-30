@@ -59,9 +59,11 @@
     <Compile Include="ElasticConnection.cs" />
     <Compile Include="ElasticMonitoringApi.cs" />
     <Compile Include="ElasticStorage.cs" />
+    <Compile Include="Exceptions\HangfireElasticSearchException.cs" />
     <Compile Include="Extensions\ElasticClientExtensions.cs" />
     <Compile Include="Extensions\EnumerableExtensions.cs" />
     <Compile Include="Extensions\HangfireElasticSearchException.cs" />
+    <Compile Include="Extensions\ResponseExtensions.cs" />
     <Compile Include="Model\Server.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
