@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Hangfire.Common;
 using Hangfire.Storage;
 
@@ -9,8 +10,9 @@ namespace Hangfire.Elasticsearch.Model
         public string Id { get; set; }
         public string StateName { get; set; }
         public DateTime CreatedAt { get; set; }
-        public StateDataDto StateData { get; set; }
+        public StateDataDto StateDataDto { get; set; }
         public InvocationDataDto InvocationDataDto { get; set; }
+        public Dictionary<string, string> JobParameters { get; set; }
 
         public JobData ToJobData()
         {

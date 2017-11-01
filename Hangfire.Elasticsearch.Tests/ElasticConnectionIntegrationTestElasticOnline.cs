@@ -460,7 +460,7 @@ namespace Hangfire.Elasticsearch.Tests
                     {"data-3", "value-3"}
                 }
             };
-            var jobData = new JobDataDto { Id = key, StateData = jobStateData };
+            var jobData = new JobDataDto { Id = key, StateDataDto = jobStateData };
             _elasticClient.Index(jobData);
             _elasticClient.Refresh(Indices.All);
 
@@ -477,7 +477,7 @@ namespace Hangfire.Elasticsearch.Tests
         {
             // GIVEN 
             const string key = "key-1";
-            var jobData = new JobDataDto { Id = key, StateData = null };
+            var jobData = new JobDataDto { Id = key, StateDataDto = null };
             _elasticClient.Index(jobData);
             _elasticClient.Refresh(Indices.All);
 
@@ -545,6 +545,78 @@ namespace Hangfire.Elasticsearch.Tests
             actualJobData.CreatedAt.Should().Be(jobData.CreatedAt);
             actualJobData.State.Should().Be(jobData.StateName);
             actualJobData.LoadException.Should().NotBeNull();
+        }
+
+        [Test]
+        public void GetJobParameter_WithNullId_Throws()
+        {
+            // GIVEN WHEN THEN
+            Assert.Throws<ArgumentNullException>(() => _elasticConnection.GetJobParameter(null, "name"));
+        }
+
+        [Test]
+        public void GetJobParameter_WithNullName_Throws()
+        {
+            // GIVEN WHEN THEN
+            Assert.Throws<ArgumentNullException>(() => _elasticConnection.GetJobParameter("id", null));
+        }
+
+        [Test]
+        public void GetJobParameter_GivenNonExistingJobData_ReturnsNull()
+        {
+            // GIVEN 
+            const string key = "key-1";
+
+            // WHEN
+            var actualJobParameter = _elasticConnection.GetJobParameter(key, "name");
+
+            // THEN
+            actualJobParameter.Should().BeNull();
+        }
+
+        [Test]
+        public void GetJobParameter_GivenExistingJobDataAndParameterName_ReturnsValue()
+        {
+            // GIVEN 
+            const string key = "key-1";
+            const string parameterName = "parameter-1";
+            const string parameterValue = "value-1";
+            var jobData = new JobDataDto
+            {
+                Id = key,
+                JobParameters = new Dictionary<string, string>
+                {
+                    {parameterName, parameterValue}
+                }
+            };
+            _elasticClient.Index(jobData);
+            _elasticClient.Refresh(Indices.All);
+
+            // WHEN
+            var actualJobParameter = _elasticConnection.GetJobParameter(key, parameterName);
+
+            // THEN
+            actualJobParameter.Should().Be(parameterValue);
+        }
+
+        [Test]
+        public void GetJobParameter_GivenExistingJobDataAndNonExistingParameterName_ReturnsNull()
+        {
+            // GIVEN 
+            const string key = "key-1";
+            var jobData = new JobDataDto
+            {
+                Id = key,
+                JobParameters = new Dictionary<string, string>()
+            };
+            _elasticClient.Index(jobData);
+            _elasticClient.Refresh(Indices.All);
+
+            // WHEN
+            var actualJobParameter = _elasticConnection.GetJobParameter(key, "parameter-1");
+
+            // THEN
+            actualJobParameter.Should().BeNull();
         }
     }
 }
