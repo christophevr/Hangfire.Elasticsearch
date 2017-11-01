@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Elasticsearch.Net;
 using FluentAssertions;
+using Hangfire.Elasticsearch.Extensions;
 using Hangfire.Elasticsearch.Model;
 using Hangfire.Elasticsearch.Tests.TestInfrastructure;
 using Nest;
@@ -617,6 +618,89 @@ namespace Hangfire.Elasticsearch.Tests
 
             // THEN
             actualJobParameter.Should().BeNull();
+        }
+
+        [Test]
+        public void SetJobParameter_WithNullId_Throws()
+        {
+            // GIVEN WHEN THEN
+            Assert.Throws<ArgumentNullException>(() => _elasticConnection.SetJobParameter(null, "name", "value"));
+        }
+
+        [Test]
+        public void SetJobParameter_WithNullName_Throws()
+        {
+            // GIVEN WHEN THEN
+            Assert.Throws<ArgumentNullException>(() => _elasticConnection.SetJobParameter("id", null, "value"));
+        }
+
+        [Test]
+        public void SetJobParameter_GivenExistingJobData_SetsValue()
+        {
+            // GIVEN 
+            const string key = "key-1";
+            var jobData = new JobDataDto
+            {
+                Id = key,
+                JobParameters = new Dictionary<string, string>()
+            };
+            _elasticClient.Index(jobData);
+            _elasticClient.Refresh(Indices.All);
+
+            // WHEN
+            const string parameterName = "parameter-1";
+            const string parameterValue = "value";
+            _elasticConnection.SetJobParameter(key, parameterName, parameterValue);
+
+            // THEN
+            var jobDataResponse = _elasticClient.Get<JobDataDto>(key).ThrowIfInvalid();
+            var jobDataDto = jobDataResponse.Source;
+            jobDataDto.JobParameters.Should().HaveCount(1);
+            jobDataDto.JobParameters.Should().ContainKey(parameterName);
+            jobDataDto.JobParameters[parameterName].Should().Be(parameterValue);
+        }
+
+        [Test]
+        public void SetJobParameter_GivenExistingJobDataWithExistingParameterName_UpdatesValue()
+        {
+            // GIVEN 
+            const string key = "key-1";
+            const string parameterName = "parameter-1";
+            var jobData = new JobDataDto
+            {
+                Id = key,
+                JobParameters = new Dictionary<string, string>
+                {
+                    {parameterName, "value" }
+                }
+            };
+            _elasticClient.Index(jobData);
+            _elasticClient.Refresh(Indices.All);
+
+            // WHEN
+            const string newParameterValue = "new value";
+            _elasticConnection.SetJobParameter(key, parameterName, newParameterValue);
+
+            // THEN
+            var jobDataResponse = _elasticClient.Get<JobDataDto>(key).ThrowIfInvalid();
+            var jobDataDto = jobDataResponse.Source;
+            jobDataDto.JobParameters.Should().HaveCount(1);
+            jobDataDto.JobParameters.Should().ContainKey(parameterName);
+            jobDataDto.JobParameters[parameterName].Should().Be(newParameterValue);
+        }
+
+        [Test]
+        public void SetJobParameter_GivenNonExistingJobData_DoesNothing()
+        {
+            // GIVEN 
+            const string key = "key-1";
+
+            // WHEN
+            _elasticConnection.SetJobParameter(key, "parameter-1", "value");
+
+            // THEN
+            var jobDataResponse = _elasticClient.Get<JobDataDto>(key).ThrowIfInvalid();
+            jobDataResponse.Found.Should().BeFalse();
         }
     }
 }
