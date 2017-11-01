@@ -52,12 +52,28 @@ namespace Hangfire.Elasticsearch
 
         public override JobData GetJobData(string jobId)
         {
-            throw new NotImplementedException();
+            if (string.IsNullOrEmpty(jobId))
+                throw new ArgumentNullException(nameof(jobId));
+
+            var jobDataResponse = _elasticClient.Get<JobDataDto>(jobId).ThrowIfInvalid();
+            if (!jobDataResponse.Found)
+                return null;
+
+            var jobDataDto = jobDataResponse.Source;
+            return jobDataDto.ToJobData();
         }
 
         public override StateData GetStateData(string jobId)
         {
-            throw new NotImplementedException();
+            if (string.IsNullOrEmpty(jobId))
+                throw new ArgumentNullException(nameof(jobId));
+
+            var jobDataResponse = _elasticClient.Get<JobDataDto>(jobId).ThrowIfInvalid();
+            if (!jobDataResponse.Found)
+                return null;
+
+            var jobData = jobDataResponse.Source;
+            return jobData.StateData?.ToStateData();
         }
 
         public override void AnnounceServer(string serverId, ServerContext context)

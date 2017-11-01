@@ -57,6 +57,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ElasticConnection.cs" />
+    <Compile Include="Model\InvocationDataDto.cs" />
+    <Compile Include="Model\JobDataDto.cs" />
+    <Compile Include="Model\StateDataDto.cs" />
     <Compile Include="Model\Hash.cs" />
     <Compile Include="Model\Set.cs" />
     <Compile Include="Model\SetValue.cs" />

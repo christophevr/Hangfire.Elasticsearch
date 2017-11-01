@@ -436,5 +436,115 @@ namespace Hangfire.Elasticsearch.Tests
             const string key = "key-1";
             Assert.Throws<ArgumentNullException>(() => _elasticConnection.SetRangeInHash(key, null));
         }
+
+        [Test]
+        public void GetStateData_GivenNullKey_Throws()
+        {
+            // GIVEN WHEN THEN
+            Assert.Throws<ArgumentNullException>(() => _elasticConnection.GetStateData(null));
+        }
+
+        [Test]
+        public void GetStateData_GivenExistingJobStateData_ReturnsExpectedResults()
+        {
+            // GIVEN 
+            const string key = "key-1";
+            var jobStateData = new StateDataDto
+            {
+                Name = "Name-1",
+                Reason = "Reason-1",
+                Data = new Dictionary<string, string>
+                {
+                    {"data-1", "value-1"},
+                    {"data-2", "value-2"},
+                    {"data-3", "value-3"}
+                }
+            };
+            var jobData = new JobDataDto { Id = key, StateData = jobStateData };
+            _elasticClient.Index(jobData);
+            _elasticClient.Refresh(Indices.All);
+
+            // WHEN
+            var actualStateData = _elasticConnection.GetStateData(key);
+
+            // THEN
+            actualStateData.Should().NotBeNull();
+            actualStateData.ShouldBeEquivalentTo(jobStateData.ToStateData());
+        }
+
+        [Test]
+        public void GetStateData_GivenNullJobStateDto_ReturnsExpectedResults()
+        {
+            // GIVEN 
+            const string key = "key-1";
+            var jobData = new JobDataDto { Id = key, StateData = null };
+            _elasticClient.Index(jobData);
+            _elasticClient.Refresh(Indices.All);
+
+            // WHEN
+            var actualStateData = _elasticConnection.GetStateData(key);
+
+            // THEN
+            actualStateData.Should().BeNull();
+        }
+
+        [Test]
+        public void GetStateData_GivenNonExistingJobStateDto_ReturnsNull()
+        {
+            // GIVEN 
+            const string key = "key-1";
+
+            // WHEN
+            var actualStateData = _elasticConnection.GetStateData(key);
+
+            // THEN
+            actualStateData.Should().BeNull();
+        }
+
+        [Test]
+        public void GetJobData_GivenNullKey_Throws()
+        {
+            // GIVEN WHEN THEN
+            Assert.Throws<ArgumentNullException>(() => _elasticConnection.GetJobData(null));
+        }
+
+        [Test]
+        public void GetJobData_GivenNonExistingJobData_ReturnsNull()
+        {
+            // GIVEN 
+            const string key = "key-1";
+
+            // WHEN
+            var actualStateData = _elasticConnection.GetJobData(key);
+
+            // THEN
+            actualStateData.Should().BeNull();
+        }
+
+        [Test]
+        public void GetJobData_GivenExistingJobData_ReturnsExpectedObject()
+        {
+            // GIVEN 
+            const string key = "key-1";
+            var jobData = new JobDataDto
+            {
+                Id = key,
+                StateName = "StateName-1",
+                CreatedAt = new DateTime(2017, 11, 1),
+                InvocationDataDto = new InvocationDataDto()
+            };
+
+            _elasticClient.Index(jobData);
+            _elasticClient.Refresh(Indices.All);
+
+            // WHEN
+            var actualJobData = _elasticConnection.GetJobData(key);
+
+            // THEN
+            actualJobData.Should().NotBeNull();
+            actualJobData.CreatedAt.Should().Be(jobData.CreatedAt);
+            actualJobData.State.Should().Be(jobData.StateName);
+            actualJobData.LoadException.Should().NotBeNull();
+        }
     }
 }
