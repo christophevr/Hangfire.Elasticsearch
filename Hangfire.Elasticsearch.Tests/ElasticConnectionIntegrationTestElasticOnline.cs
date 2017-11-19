@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Elasticsearch.Net;
 using FluentAssertions;
 using Hangfire.Elasticsearch.Extensions;
@@ -701,6 +702,20 @@ namespace Hangfire.Elasticsearch.Tests
             // THEN
             var jobDataResponse = _elasticClient.Get<JobDataDto>(key).ThrowIfInvalid();
             jobDataResponse.Found.Should().BeFalse();
+        }
+
+        [Test]
+        public void FetchNextJob_GivenNullQueues_Throws()
+        {
+            // GIVEN WHEN THEN
+            Assert.Throws<ArgumentNullException>(() => _elasticConnection.FetchNextJob(null, CancellationToken.None));
+        }
+
+        [Test]
+        public void FetchNextJob_GivenEmptyQueues_Throws()
+        {
+            // GIVEN WHEN THEN
+            Assert.Throws<ArgumentException>(() => _elasticConnection.FetchNextJob(new string[0], CancellationToken.None));
         }
     }
 }

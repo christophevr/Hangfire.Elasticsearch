@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reactive.Linq;
 using System.Threading;
 using Hangfire.Common;
 using Hangfire.Elasticsearch.Extensions;
@@ -14,12 +15,14 @@ namespace Hangfire.Elasticsearch
     public class ElasticConnection : JobStorageConnection
     {
         private readonly IElasticClient _elasticClient;
+        private readonly TimeSpan _fetchNextJobTimeout;
 
         public ElasticConnection(IElasticClient elasticClient)
         {
             _elasticClient = elasticClient;
+            _fetchNextJobTimeout = TimeSpan.FromSeconds(30); // TODO Parameterize
         }
-        
+
         public override IWriteOnlyTransaction CreateWriteTransaction()
         {
             throw new NotImplementedException();
@@ -31,11 +34,6 @@ namespace Hangfire.Elasticsearch
         }
 
         public override string CreateExpiredJob(Job job, IDictionary<string, string> parameters, DateTime createdAt, TimeSpan expireIn)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override IFetchedJob FetchNextJob(string[] queues, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }
@@ -73,6 +71,53 @@ namespace Hangfire.Elasticsearch
                 return parameterValue;
 
             return null;
+        }
+
+        public override IFetchedJob FetchNextJob(string[] queues, CancellationToken cancellationToken)
+        {
+            if (queues == null)
+                throw new ArgumentNullException(nameof(queues));
+            if (queues.Length == 0)
+                throw new ArgumentException($"'{nameof(queues)}' cannot be an empty list", nameof(queues));
+
+            var jobFetchedCancellationToken = new CancellationTokenSource();
+            var compositeCancellationToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, jobFetchedCancellationToken.Token);
+
+            var pollingInterval = TimeSpan.FromSeconds(5); // TODO parameterize
+            IFetchedJob fetchedJob = null;
+
+            Observable.Interval(pollingInterval)
+                .Subscribe(_ =>
+                    {
+                        var timeout = DateTime.UtcNow.Add(_fetchNextJobTimeout.Negate());
+
+                        var searchResponse = _elasticClient.Search<JobDataDto>(descr => descr
+                                .Version()
+                                .Size(1)
+                                .Sort(sort => sort.Field(job => job.CreatedAt, SortOrder.Descending))
+                                .Query(q =>
+                                    q.Terms(terms => terms.Field(job => job.Queue).Terms(queues)) &&
+                                    (q.Term(job => job.FetchedAt, null) || q.DateRange(dr => dr.Field(job => job.FetchedAt).LessThan(timeout)))))
+                            .ThrowIfInvalid();
+
+                        if (searchResponse.Total == 1)
+                        {
+                            var fetchedJobDataHit = searchResponse.Hits.Single();
+                            var jobDataVersion = fetchedJobDataHit.Version.Value;
+                            var jobData = fetchedJobDataHit.Source;
+
+                            jobData.FetchedAt = DateTime.UtcNow;
+                            _elasticClient
+                                .Index(jobData, descr => descr.Version(jobDataVersion))
+                                .ThrowIfInvalid();
+
+                            fetchedJob = new FetchedJob(jobData, _elasticClient);
+                            jobFetchedCancellationToken.Cancel();
+                        }
+                    },
+                    token: compositeCancellationToken.Token);
+
+            return fetchedJob;
         }
 
         public override JobData GetJobData(string jobId)
@@ -134,7 +179,7 @@ namespace Hangfire.Elasticsearch
             var server = serverGetResponse.Source;
             server.LastHeartBeat = DateTime.UtcNow;
 
-            _elasticClient.Index(server).ThrowIfInvalid();
+            _elasticClient.Index(server, descr => descr.Version(serverGetResponse.Version)).ThrowIfInvalid();
         }
 
         public override int RemoveTimedOutServers(TimeSpan timeOut)
@@ -151,7 +196,7 @@ namespace Hangfire.Elasticsearch
                         .LessThan(DateMath.Anchored(timeOutAt)))));
 
             var serverIds = getTimedOutServerIdsReponse.Select(x => x.Id);
-            var bulkResponses = _elasticClient.BatchedBulk(serverIds, 
+            var bulkResponses = _elasticClient.BatchedBulk(serverIds,
                 (descr, serverId) => descr.Delete<object>(desc => desc.Id(serverId).Type<Model.Server>()));
 
             return bulkResponses.SelectMany(response => response.Items).Count();
