@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Hangfire.Common;
 using Hangfire.Elasticsearch.Extensions;
 using Hangfire.Elasticsearch.Model;
@@ -94,10 +95,13 @@ namespace Hangfire.Elasticsearch
                         var searchResponse = _elasticClient.Search<JobDataDto>(descr => descr
                                 .Version()
                                 .Size(1)
-                                .Sort(sort => sort.Field(job => job.CreatedAt, SortOrder.Descending))
+                                .Sort(sort => sort.Field(j => j.CreatedAt, SortOrder.Descending))
                                 .Query(q =>
-                                    q.Terms(terms => terms.Field(job => job.Queue).Terms(queues)) &&
-                                    (q.Term(job => job.FetchedAt, null) || q.DateRange(dr => dr.Field(job => job.FetchedAt).LessThan(timeout)))))
+                                    q.Terms(terms => terms.Field(j => j.Queue).Terms(queues)) &&
+                                    (
+                                        q.Bool(b => b.MustNot(mq => mq.Exists(j => j.Field(f => f.FetchedAt)))) ||
+                                        q.DateRange(dr => dr.Field(j => j.FetchedAt).GreaterThan(timeout))
+                                    )))
                             .ThrowIfInvalid();
 
                         if (searchResponse.Total == 1)
@@ -117,6 +121,7 @@ namespace Hangfire.Elasticsearch
                     },
                     token: compositeCancellationToken.Token);
 
+            WaitHandle.WaitAll(new[] {compositeCancellationToken.Token.WaitHandle});
             return fetchedJob;
         }
 

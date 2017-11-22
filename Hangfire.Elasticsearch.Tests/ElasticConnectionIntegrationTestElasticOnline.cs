@@ -706,5 +706,29 @@ namespace Hangfire.Elasticsearch.Tests
             // GIVEN WHEN THEN
             Assert.Throws<ArgumentException>(() => _elasticConnection.FetchNextJob(new string[0], CancellationToken.None));
         }
+
+        [Test]
+        public void FetchNextJob_FetchesNextJobInQueue()
+        {
+            // GIVEN
+            const string queue = "default";
+            var jobData = new JobDataDto
+            {
+                Id = "job-1",
+                Queue = queue,
+                CreatedAt = new DateTime(2017, 11, 22)
+            };
+            _elasticClient.Index(jobData, desc => desc.Refresh(Refresh.True)).ThrowIfInvalid();
+
+            // WHEN
+            var job = _elasticConnection.FetchNextJob(new[] { queue }, CancellationToken.None);
+
+            // THEN
+            job.Should().NotBeNull();
+
+            var fetchedJob = job as FetchedJob;
+            fetchedJob.Should().NotBeNull();
+            fetchedJob.JobId.Should().Be(jobData.Id);
+        }
     }
 }
