@@ -1,0 +1,8 @@
+version: 1.0.{build}
+image: Visual Studio 2017
+environment:
+  VisualStudioVersion: 15.0
+before_build:
+- cmd: nuget restore
+build:
+  verbosity: minimal
