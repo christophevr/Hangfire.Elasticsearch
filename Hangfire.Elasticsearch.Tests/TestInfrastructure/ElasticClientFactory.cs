@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using Hangfire.Elasticsearch.Extensions;
 using Nest;
 using NUnit.Framework;
 
@@ -16,7 +17,11 @@ namespace Hangfire.Elasticsearch.Tests.TestInfrastructure
                 .ThrowExceptions(false)
                 .DisableDirectStreaming()
                 .OnRequestCompleted(details => { Console.WriteLine($@"Request completed. Sent a {details.HttpMethod} to {details.Uri} -- Request: {Encoding.UTF8.GetString(details.RequestBodyInBytes ?? new byte[0])} - Response: {Encoding.UTF8.GetString(details.ResponseBodyInBytes ?? new byte[0])}"); });
-            return new ElasticClient(connectionSettingsValues);
+
+            var elasticClient = new ElasticClient(connectionSettingsValues);
+            elasticClient.CreateIndex(TestIndexName).ThrowIfInvalid();
+
+            return elasticClient;
         }
 
         public static IElasticClient CreateOfflineClient()

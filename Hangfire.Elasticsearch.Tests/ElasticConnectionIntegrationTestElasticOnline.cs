@@ -40,7 +40,7 @@ namespace Hangfire.Elasticsearch.Tests
             _elasticConnection.AnnounceServer(serverId, serverContext);
 
             // THEN
-            var serverResponse = _elasticClient.Get<Model.Server>(serverId);
+            var serverResponse = _elasticClient.Get<Model.Server>(serverId).ThrowIfInvalid();
             serverResponse.Found.Should().BeTrue();
 
             var server = serverResponse.Source;
@@ -53,7 +53,7 @@ namespace Hangfire.Elasticsearch.Tests
         {
             // GIVEN
             const string serverId = "server-001";
-            _elasticClient.Index(new Model.Server { Id = serverId }, descr => descr.Refresh(Refresh.True));
+            _elasticClient.Index(new Model.Server { Id = serverId }, descr => descr.Refresh(Refresh.True)).ThrowIfInvalid();
 
             // WHEN
             var serverContext = new Server.ServerContext
@@ -64,7 +64,7 @@ namespace Hangfire.Elasticsearch.Tests
             _elasticConnection.AnnounceServer(serverId, serverContext);
 
             // THEN
-            var serverResponse = _elasticClient.Get<Model.Server>(serverId);
+            var serverResponse = _elasticClient.Get<Model.Server>(serverId).ThrowIfInvalid();
             serverResponse.Found.Should().BeTrue();
 
             var server = serverResponse.Source;
@@ -77,13 +77,13 @@ namespace Hangfire.Elasticsearch.Tests
         {
             // GIVEN
             const string serverId = "server-001";
-            _elasticClient.Index(new Model.Server { Id = serverId }, descr => descr.Refresh(Refresh.True));
+            _elasticClient.Index(new Model.Server { Id = serverId }, descr => descr.Refresh(Refresh.True)).ThrowIfInvalid();
 
             // WHEN
             _elasticConnection.RemoveServer(serverId);
 
             // THEN
-            var getServerResponse = _elasticClient.Get<Model.Server>(serverId);
+            var getServerResponse = _elasticClient.Get<Model.Server>(serverId).ThrowIfInvalid();
             getServerResponse.Found.Should().BeFalse();
         }
 
@@ -97,7 +97,7 @@ namespace Hangfire.Elasticsearch.Tests
             _elasticConnection.RemoveServer(serverId);
 
             // THEN
-            var getServerResponse = _elasticClient.Get<Model.Server>(serverId);
+            var getServerResponse = _elasticClient.Get<Model.Server>(serverId).ThrowIfInvalid();
             getServerResponse.Found.Should().BeFalse();
         }
 
@@ -107,13 +107,13 @@ namespace Hangfire.Elasticsearch.Tests
             // GIVEN
             const string serverId = "server-001";
             var server = new Model.Server { Id = serverId, LastHeartBeat = new DateTime(2017, 10, 1) };
-            _elasticClient.Index(server, descr => descr.Refresh(Refresh.True));
+            _elasticClient.Index(server, descr => descr.Refresh(Refresh.True)).ThrowIfInvalid();
 
             // WHEN
             _elasticConnection.Heartbeat(serverId);
 
             // THEN
-            var getServerResponse = _elasticClient.Get<Model.Server>(serverId);
+            var getServerResponse = _elasticClient.Get<Model.Server>(serverId).ThrowIfInvalid();
             getServerResponse.Found.Should().BeTrue();
             getServerResponse.Source.LastHeartBeat.Should().NotBe(server.LastHeartBeat);
         }
@@ -128,7 +128,7 @@ namespace Hangfire.Elasticsearch.Tests
             _elasticConnection.Heartbeat(serverId);
 
             // THEN
-            var getServerResponse = _elasticClient.Count<Model.Server>(descr => descr.Query(q => q.MatchAll()));
+            var getServerResponse = _elasticClient.Count<Model.Server>(descr => descr.Query(q => q.MatchAll())).ThrowIfInvalid();
             getServerResponse.Count.Should().Be(0);
         }
 
@@ -138,14 +138,14 @@ namespace Hangfire.Elasticsearch.Tests
             // GIVEN
             const string serverId = "server-001";
             var server = new Model.Server { Id = serverId, LastHeartBeat = new DateTime(2000, 1, 1) };
-            _elasticClient.Index(server, descr => descr.Refresh(Refresh.True));
+            _elasticClient.Index(server, descr => descr.Refresh(Refresh.True)).ThrowIfInvalid();
 
             // WHEN
             var removedServersCount = _elasticConnection.RemoveTimedOutServers(TimeSpan.FromSeconds(1));
 
             // THEN
             removedServersCount.Should().Be(1);
-            var getServerResponse = _elasticClient.Get<Model.Server>(serverId);
+            var getServerResponse = _elasticClient.Get<Model.Server>(serverId).ThrowIfInvalid();
             getServerResponse.Found.Should().BeFalse();
         }
 
@@ -156,16 +156,16 @@ namespace Hangfire.Elasticsearch.Tests
             const int elasticMaxResponseDocumentCount = 5000;
             var servers = Enumerable.Range(0, elasticMaxResponseDocumentCount + 1)
                 .Select(i => new Model.Server { Id = $"server-{i}", LastHeartBeat = new DateTime(2000, 1, 1) });
-            _elasticClient.IndexMany(servers);
-            _elasticClient.Refresh(Indices.All);
+            _elasticClient.IndexMany(servers).ThrowIfInvalid();
+            _elasticClient.Refresh(Indices.All).ThrowIfInvalid();
 
             // WHEN
             var removedServersCount = _elasticConnection.RemoveTimedOutServers(TimeSpan.FromSeconds(1));
 
             // THEN
             removedServersCount.Should().Be(elasticMaxResponseDocumentCount + 1);
-            _elasticClient.Refresh(Indices.All);
-            var getServerResponse = _elasticClient.Count<Model.Server>(descr => descr.Query(q => q.MatchAll()));
+            _elasticClient.Refresh(Indices.All).ThrowIfInvalid();
+            var getServerResponse = _elasticClient.Count<Model.Server>(descr => descr.Query(q => q.MatchAll())).ThrowIfInvalid();
             getServerResponse.Count.Should().Be(0);
         }
 
@@ -175,14 +175,14 @@ namespace Hangfire.Elasticsearch.Tests
             // GIVEN
             const string serverId = "server-001";
             var server = new Model.Server { Id = serverId, LastHeartBeat = DateTime.UtcNow };
-            _elasticClient.Index(server, descr => descr.Refresh(Refresh.True));
+            _elasticClient.Index(server, descr => descr.Refresh(Refresh.True)).ThrowIfInvalid();
 
             // WHEN
             var removedServersCount = _elasticConnection.RemoveTimedOutServers(TimeSpan.FromDays(1));
 
             // THEN
             removedServersCount.Should().Be(0);
-            var getServerResponse = _elasticClient.Get<Model.Server>(serverId);
+            var getServerResponse = _elasticClient.Get<Model.Server>(serverId).ThrowIfInvalid();
             getServerResponse.Found.Should().BeTrue();
             getServerResponse.Source.ShouldBeEquivalentTo(server);
         }
@@ -227,8 +227,8 @@ namespace Hangfire.Elasticsearch.Tests
                     }
                 }
             };
-            _elasticClient.IndexMany(sets);
-            _elasticClient.Refresh(Indices.All);
+            _elasticClient.IndexMany(sets).ThrowIfInvalid();
+            _elasticClient.Refresh(Indices.All).ThrowIfInvalid();
 
             // WHEN
             var set = _elasticConnection.GetAllItemsFromSet("key-1");
@@ -277,8 +277,7 @@ namespace Hangfire.Elasticsearch.Tests
                     new SetValue {Value = "value-3", Score = 20},
                 }
             };
-            _elasticClient.Index(set);
-            _elasticClient.Refresh(Indices.All);
+            _elasticClient.Index(set, desc => desc.Refresh(Refresh.True)).ThrowIfInvalid();
 
             // WHEN
             var value = _elasticConnection.GetFirstByLowestScoreFromSet(key, 13, 17);
@@ -314,8 +313,7 @@ namespace Hangfire.Elasticsearch.Tests
                     new SetValue {Value = "value-1", Score = 10},
                 }
             };
-            _elasticClient.Index(set);
-            _elasticClient.Refresh(Indices.All);
+            _elasticClient.Index(set, desc => desc.Refresh(Refresh.True)).ThrowIfInvalid();
 
             // WHEN
             var value = _elasticConnection.GetFirstByLowestScoreFromSet(key, 15, 20);
@@ -339,8 +337,7 @@ namespace Hangfire.Elasticsearch.Tests
                     {"hash-3", "value-3"},
                 }
             };
-            _elasticClient.Index(hash);
-            _elasticClient.Refresh(Indices.All);
+            _elasticClient.Index(hash, desc => desc.Refresh(Refresh.True)).ThrowIfInvalid();
 
             // WHEN
             var actualHashes = _elasticConnection.GetAllEntriesFromHash(key);
@@ -383,8 +380,7 @@ namespace Hangfire.Elasticsearch.Tests
                     {"hash-2", "value-2"}
                 }
             };
-            _elasticClient.Index(hash);
-            _elasticClient.Refresh(Indices.All);
+            _elasticClient.Index(hash, desc => desc.Refresh(Refresh.True)).ThrowIfInvalid();
 
             // WHEN
             var newValues = new Dictionary<string, string>
@@ -395,7 +391,7 @@ namespace Hangfire.Elasticsearch.Tests
             _elasticConnection.SetRangeInHash(key, newValues);
 
             // THEN
-            var actualHashes = _elasticClient.Get<Hash>(key);
+            var actualHashes = _elasticClient.Get<Hash>(key).ThrowIfInvalid();
             var expectedHashes = new Dictionary<string, string>
             {
                 {"hash-1", "value-1"},
@@ -420,7 +416,7 @@ namespace Hangfire.Elasticsearch.Tests
             _elasticConnection.SetRangeInHash(key, newValues);
 
             // THEN
-            var actualHashes = _elasticClient.Get<Hash>(key);
+            var actualHashes = _elasticClient.Get<Hash>(key).ThrowIfInvalid();
             actualHashes.Source.Hashes.ShouldBeEquivalentTo(newValues);
         }
 
@@ -463,8 +459,7 @@ namespace Hangfire.Elasticsearch.Tests
                 }
             };
             var jobData = new JobDataDto { Id = key, StateDataDto = jobStateData };
-            _elasticClient.Index(jobData);
-            _elasticClient.Refresh(Indices.All);
+            _elasticClient.Index(jobData, desc => desc.Refresh(Refresh.True)).ThrowIfInvalid();
 
             // WHEN
             var actualStateData = _elasticConnection.GetStateData(key);
@@ -480,8 +475,7 @@ namespace Hangfire.Elasticsearch.Tests
             // GIVEN 
             const string key = "key-1";
             var jobData = new JobDataDto { Id = key, StateDataDto = null };
-            _elasticClient.Index(jobData);
-            _elasticClient.Refresh(Indices.All);
+            _elasticClient.Index(jobData, desc => desc.Refresh(Refresh.True)).ThrowIfInvalid();
 
             // WHEN
             var actualStateData = _elasticConnection.GetStateData(key);
@@ -536,8 +530,7 @@ namespace Hangfire.Elasticsearch.Tests
                 InvocationDataDto = new InvocationDataDto()
             };
 
-            _elasticClient.Index(jobData);
-            _elasticClient.Refresh(Indices.All);
+            _elasticClient.Index(jobData, desc => desc.Refresh(Refresh.True)).ThrowIfInvalid();
 
             // WHEN
             var actualJobData = _elasticConnection.GetJobData(key);
@@ -591,8 +584,7 @@ namespace Hangfire.Elasticsearch.Tests
                     {parameterName, parameterValue}
                 }
             };
-            _elasticClient.Index(jobData);
-            _elasticClient.Refresh(Indices.All);
+            _elasticClient.Index(jobData, desc => desc.Refresh(Refresh.True)).ThrowIfInvalid();
 
             // WHEN
             var actualJobParameter = _elasticConnection.GetJobParameter(key, parameterName);
@@ -611,8 +603,7 @@ namespace Hangfire.Elasticsearch.Tests
                 Id = key,
                 JobParameters = new Dictionary<string, string>()
             };
-            _elasticClient.Index(jobData);
-            _elasticClient.Refresh(Indices.All);
+            _elasticClient.Index(jobData, desc => desc.Refresh(Refresh.True)).ThrowIfInvalid();
 
             // WHEN
             var actualJobParameter = _elasticConnection.GetJobParameter(key, "parameter-1");
@@ -645,8 +636,7 @@ namespace Hangfire.Elasticsearch.Tests
                 Id = key,
                 JobParameters = new Dictionary<string, string>()
             };
-            _elasticClient.Index(jobData);
-            _elasticClient.Refresh(Indices.All);
+            _elasticClient.Index(jobData, desc => desc.Refresh(Refresh.True)).ThrowIfInvalid();
 
             // WHEN
             const string parameterName = "parameter-1";
@@ -675,8 +665,7 @@ namespace Hangfire.Elasticsearch.Tests
                     {parameterName, "value" }
                 }
             };
-            _elasticClient.Index(jobData);
-            _elasticClient.Refresh(Indices.All);
+            _elasticClient.Index(jobData, desc => desc.Refresh(Refresh.True)).ThrowIfInvalid();
 
             // WHEN
             const string newParameterValue = "new value";
