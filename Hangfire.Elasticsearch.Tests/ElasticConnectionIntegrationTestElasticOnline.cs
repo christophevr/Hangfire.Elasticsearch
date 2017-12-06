@@ -6,7 +6,9 @@ using Elasticsearch.Net;
 using FluentAssertions;
 using Hangfire.Elasticsearch.Extensions;
 using Hangfire.Elasticsearch.Model;
+using Hangfire.Elasticsearch.Tests.Helpers;
 using Hangfire.Elasticsearch.Tests.TestInfrastructure;
+using Hangfire.Storage;
 using Nest;
 using NUnit.Framework;
 
@@ -729,6 +731,62 @@ namespace Hangfire.Elasticsearch.Tests
             var fetchedJob = job as FetchedJob;
             fetchedJob.Should().NotBeNull();
             fetchedJob.JobId.Should().Be(jobData.Id);
+        }
+
+        [Test]
+        public void FetchNextJob_FetchesNextJobWhenAvailable()
+        {
+            // GIVEN
+            const string queue = "default";
+            var jobData = new JobDataDto
+            {
+                Id = "job-1",
+                Queue = queue,
+                CreatedAt = new DateTime(2017, 11, 22)
+            };
+
+            // WHEN
+            var task = TaskHelper.RunTimedTask(() => _elasticConnection.FetchNextJob(new[] { queue }, CancellationToken.None));
+
+            var timeToWait = TimeSpan.FromSeconds(5);
+            Thread.Sleep(timeToWait);
+            _elasticClient.Index(jobData, desc => desc.Refresh(Refresh.True)).ThrowIfInvalid();
+
+            task.Wait();
+
+            // THEN
+            var executionTime = task.Result.ExecutionDuration;
+            var fetchedJob = task.Result.Result;
+
+            fetchedJob.Should().NotBeNull();
+            var hfFetchedJob = fetchedJob as FetchedJob;
+            hfFetchedJob.Should().NotBeNull();
+            hfFetchedJob.JobId.Should().Be(jobData.Id);
+
+            executionTime.Should().BeGreaterOrEqualTo(timeToWait);
+        }
+
+        [Test]
+        public void FetchNextJob_ReturnsNull_WhenNoJobAvailable_AndCancellationRequested()
+        {
+            // GIVEN
+            const string queue = "default";
+            var cancellationToken = new CancellationTokenSource();
+
+            // WHEN
+            var task = TaskHelper.RunTimedTask(() => _elasticConnection.FetchNextJob(new[] { queue }, cancellationToken.Token));
+
+            var timeToWait = TimeSpan.FromSeconds(5);
+            cancellationToken.CancelAfter(timeToWait);
+
+            task.Wait();
+
+            // THEN
+            var executionTime = task.Result.ExecutionDuration;
+            var fetchedJob = task.Result.Result;
+
+            fetchedJob.Should().BeNull();
+            executionTime.Should().BeGreaterOrEqualTo(timeToWait);
         }
     }
 }

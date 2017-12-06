@@ -72,6 +72,7 @@
   <ItemGroup>
     <Compile Include="ElasticConnectionIntegrationTestElasticOnline.cs" />
     <Compile Include="Extensions\EnumerableExtensionsTest.cs" />
+    <Compile Include="Helpers\TaskHelper.cs" />
     <Compile Include="TestInfrastructure\ElasticClientFactory.cs" />
     <Compile Include="ElasticConnectionIntegrationTestElasticOffline.cs" />
     <Compile Include="Extensions\ElasticClientExtensionsIntegrationTest.cs" />
