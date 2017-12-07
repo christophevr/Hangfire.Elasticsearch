@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Hangfire.Common;
 using Hangfire.Elasticsearch.Extensions;
 using Hangfire.Elasticsearch.Model;
@@ -16,12 +15,12 @@ namespace Hangfire.Elasticsearch
     public class ElasticConnection : JobStorageConnection
     {
         private readonly IElasticClient _elasticClient;
-        private readonly TimeSpan _fetchNextJobTimeout;
+        private readonly HangfireElasticSettings _settings;
 
-        public ElasticConnection(IElasticClient elasticClient)
+        public ElasticConnection(IElasticClient elasticClient, HangfireElasticSettings settings)
         {
             _elasticClient = elasticClient;
-            _fetchNextJobTimeout = TimeSpan.FromSeconds(30); // TODO Parameterize
+            _settings = settings;
         }
 
         public override IWriteOnlyTransaction CreateWriteTransaction()
@@ -36,6 +35,20 @@ namespace Hangfire.Elasticsearch
 
         public override string CreateExpiredJob(Job job, IDictionary<string, string> parameters, DateTime createdAt, TimeSpan expireIn)
         {
+            if (job == null)
+                throw new ArgumentNullException(nameof(job));
+            if (parameters == null)
+                throw new ArgumentNullException(nameof(parameters));
+
+            var invocationData = InvocationData.Serialize(job);
+            var jobData = new JobDataDto()
+            {
+                Id = Guid.NewGuid().ToString(),
+                CreatedAt = createdAt,
+                ExpireAt = DateTime.UtcNow.Add(expireIn),
+                InvocationDataDto = InvocationDataDto.Create(invocationData)
+            };
+
             throw new NotImplementedException();
         }
 
@@ -90,7 +103,7 @@ namespace Hangfire.Elasticsearch
             Observable.Interval(pollingInterval)
                 .Subscribe(_ =>
                     {
-                        var timeout = DateTime.UtcNow.Add(_fetchNextJobTimeout.Negate());
+                        var timeout = DateTime.UtcNow.Add(_settings.FetchNextJobTimeout.Negate());
 
                         var searchResponse = _elasticClient.Search<JobDataDto>(descr => descr
                                 .Version()

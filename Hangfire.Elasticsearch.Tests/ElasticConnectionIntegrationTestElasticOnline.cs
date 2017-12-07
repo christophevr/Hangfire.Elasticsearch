@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using Elasticsearch.Net;
 using FluentAssertions;
+using Hangfire.Common;
 using Hangfire.Elasticsearch.Extensions;
 using Hangfire.Elasticsearch.Model;
 using Hangfire.Elasticsearch.Tests.Helpers;
@@ -24,7 +26,7 @@ namespace Hangfire.Elasticsearch.Tests
         public void SetUp()
         {
             _elasticClient = ElasticClientFactory.CreateClientForTest();
-            _elasticConnection = new ElasticConnection(_elasticClient);
+            _elasticConnection = new ElasticConnection(_elasticClient, new HangfireElasticSettings());
         }
 
         [Test]
@@ -787,6 +789,53 @@ namespace Hangfire.Elasticsearch.Tests
 
             fetchedJob.Should().BeNull();
             executionTime.Should().BeGreaterOrEqualTo(timeToWait);
+        }
+
+        [Test]
+        public void FetchNextJob_ReturnsNull_WhenNoJobAvailableInSpecifiedQueue_AndCancellationRequested()
+        {
+            // GIVEN
+            const string queue = "queue-1";
+            var jobData = new JobDataDto
+            {
+                Id = "job-1",
+                Queue = "queue-2",
+                CreatedAt = new DateTime(2017, 11, 22)
+            };
+            _elasticClient.Index(jobData, desc => desc.Refresh(Refresh.True)).ThrowIfInvalid();
+            var cancellationToken = new CancellationTokenSource();
+
+            // WHEN
+            var task = TaskHelper.RunTimedTask(() => _elasticConnection.FetchNextJob(new[] { queue }, cancellationToken.Token));
+
+            var timeToWait = TimeSpan.FromSeconds(5);
+            cancellationToken.CancelAfter(timeToWait);
+
+            task.Wait();
+
+            // THEN
+            var executionTime = task.Result.ExecutionDuration;
+            var fetchedJob = task.Result.Result;
+
+            fetchedJob.Should().BeNull();
+            executionTime.Should().BeGreaterOrEqualTo(timeToWait);
+        }
+
+        [Test]
+        public void CreateExpiredJob_GivenNullJob_Throws()
+        {
+            // GIVEN WHEN THEN
+            Assert.Throws<ArgumentNullException>(() => _elasticConnection.CreateExpiredJob(null, new Dictionary<string, string>(), new DateTime(), new TimeSpan()));
+        }
+
+        [Test]
+        public void CreateExpiredJob_GivenNullParameters_Throws()
+        {
+            // GIVEN 
+            var currentMethod = GetType().GetMethod(nameof(CreateExpiredJob_GivenNullJob_Throws));
+
+            // WHEN THEN
+            Assert.Throws<ArgumentNullException>(() => _elasticConnection.CreateExpiredJob(new Job(currentMethod), null, new DateTime(), new TimeSpan()));
         }
     }
 }

@@ -9,8 +9,9 @@ namespace Hangfire.Elasticsearch.Model
     {
         public string Id { get; set; }
         public string StateName { get; set; }
-        public DateTime CreatedAt { get; set; }
         public string Queue { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime ExpireAt { get; set; }
         public DateTime? FetchedAt { get; set; }
         public StateDataDto StateDataDto { get; set; }
         public InvocationDataDto InvocationDataDto { get; set; }

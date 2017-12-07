@@ -13,5 +13,16 @@ namespace Hangfire.Elasticsearch.Model
         {
             return new InvocationData(Type, Method, ParameterTypes, Arguments);
         }
+
+        public static InvocationDataDto Create(InvocationData invocationData)
+        {
+            return new InvocationDataDto
+            {
+                Type = invocationData.Type,
+                Arguments = invocationData.Arguments,
+                Method = invocationData.Method,
+                ParameterTypes = invocationData.ParameterTypes
+            };
+        }
     }
 }

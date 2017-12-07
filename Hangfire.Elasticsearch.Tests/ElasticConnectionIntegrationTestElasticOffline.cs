@@ -17,7 +17,7 @@ namespace Hangfire.Elasticsearch.Tests
         public void SetUp()
         {
             _elasticClient = ElasticClientFactory.CreateOfflineClient();
-            _elasticConnection = new ElasticConnection(_elasticClient);
+            _elasticConnection = new ElasticConnection(_elasticClient, new HangfireElasticSettings());
         }
 
         [Test]

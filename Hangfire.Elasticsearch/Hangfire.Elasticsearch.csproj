@@ -66,6 +66,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ElasticConnection.cs" />
+    <Compile Include="HangfireElasticSettings.cs" />
     <Compile Include="Model\FetchedJob.cs" />
     <Compile Include="Model\InvocationDataDto.cs" />
     <Compile Include="Model\JobDataDto.cs" />
